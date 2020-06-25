@@ -1,2 +1,8 @@
+modules.order
+Module.symvers
+*.o.ur-safe
+*.ko
+*.mod.c
 *.o
+.*
 old/
