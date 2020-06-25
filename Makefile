@@ -2,9 +2,9 @@
 # Makefile for the FUSE filesystem.
 #
 
-obj-m += fuse.o
+obj-m += ndfuse.o
 
-fuse-objs := dev.o dir.o file.o inode.o control.o xattr.o acl.o
+ndfuse-objs := dev.o dir.o file.o inode.o control.o xattr.o acl.o
 
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules

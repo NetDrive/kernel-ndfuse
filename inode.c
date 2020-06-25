@@ -976,7 +976,7 @@ static int fuse_bdi_init(struct fuse_conn *fc, struct super_block *sb)
 	char *suffix = "";
 
 	if (sb->s_bdev) {
-		suffix = "-fuseblk";
+		suffix = "-ndfuseblk";
 		/*
 		 * sb->s_bdi points to blkdev's bdi however we want to redirect
 		 * it to our private bdi...
@@ -1204,12 +1204,12 @@ static void fuse_kill_sb_anon(struct super_block *sb)
 
 static struct file_system_type fuse_fs_type = {
 	.owner		= THIS_MODULE,
-	.name		= "fuse",
+	.name		= "ndfuse",
 	.fs_flags	= FS_HAS_SUBTYPE,
 	.mount		= fuse_mount,
 	.kill_sb	= fuse_kill_sb_anon,
 };
-MODULE_ALIAS_FS("fuse");
+MODULE_ALIAS_FS("ndfuse");
 
 #ifdef CONFIG_BLOCK
 static struct dentry *fuse_mount_blk(struct file_system_type *fs_type,
@@ -1234,12 +1234,12 @@ static void fuse_kill_sb_blk(struct super_block *sb)
 
 static struct file_system_type fuseblk_fs_type = {
 	.owner		= THIS_MODULE,
-	.name		= "fuseblk",
+	.name		= "ndfuseblk",
 	.mount		= fuse_mount_blk,
 	.kill_sb	= fuse_kill_sb_blk,
 	.fs_flags	= FS_REQUIRES_DEV | FS_HAS_SUBTYPE,
 };
-MODULE_ALIAS_FS("fuseblk");
+MODULE_ALIAS_FS("ndfuseblk");
 
 static inline int register_fuseblk(void)
 {
@@ -1317,7 +1317,7 @@ static int fuse_sysfs_init(void)
 {
 	int err;
 
-	fuse_kobj = kobject_create_and_add("fuse", fs_kobj);
+	fuse_kobj = kobject_create_and_add("ndfuse", fs_kobj);
 	if (!fuse_kobj) {
 		err = -ENOMEM;
 		goto out_err;
