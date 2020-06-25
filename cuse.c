@@ -93,7 +93,7 @@ static ssize_t cuse_read_iter(struct kiocb *kiocb, struct iov_iter *to)
 	struct fuse_io_priv io = FUSE_IO_PRIV_SYNC(kiocb);
 	loff_t pos = 0;
 
-	return fuse_direct_io(&io, to, &pos, FUSE_DIO_CUSE);
+	return ndfuse_direct_io(&io, to, &pos, FUSE_DIO_CUSE);
 }
 
 static ssize_t cuse_write_iter(struct kiocb *kiocb, struct iov_iter *from)
@@ -104,7 +104,7 @@ static ssize_t cuse_write_iter(struct kiocb *kiocb, struct iov_iter *from)
 	 * No locking or generic_write_checks(), the server is
 	 * responsible for locking and sanity checks.
 	 */
-	return fuse_direct_io(&io, from, &pos,
+	return ndfuse_direct_io(&io, from, &pos,
 			      FUSE_DIO_WRITE | FUSE_DIO_CUSE);
 }
 
@@ -118,7 +118,7 @@ static int cuse_open(struct inode *inode, struct file *file)
 	mutex_lock(&cuse_lock);
 	list_for_each_entry(pos, cuse_conntbl_head(devt), list)
 		if (pos->dev->devt == devt) {
-			fuse_conn_get(&pos->fc);
+			ndfuse_conn_get(&pos->fc);
 			cc = pos;
 			break;
 		}
@@ -132,9 +132,9 @@ static int cuse_open(struct inode *inode, struct file *file)
 	 * Generic permission check is already done against the chrdev
 	 * file, proceed to open.
 	 */
-	rc = fuse_do_open(&cc->fc, 0, file, 0);
+	rc = ndfuse_do_open(&cc->fc, 0, file, 0);
 	if (rc)
-		fuse_conn_put(&cc->fc);
+		ndfuse_conn_put(&cc->fc);
 	return rc;
 }
 
@@ -143,8 +143,8 @@ static int cuse_release(struct inode *inode, struct file *file)
 	struct fuse_file *ff = file->private_data;
 	struct fuse_conn *fc = ff->fc;
 
-	fuse_sync_release(ff, file->f_flags);
-	fuse_conn_put(fc);
+	ndfuse_sync_release(ff, file->f_flags);
+	ndfuse_conn_put(fc);
 
 	return 0;
 }
@@ -159,7 +159,7 @@ static long cuse_file_ioctl(struct file *file, unsigned int cmd,
 	if (cc->unrestricted_ioctl)
 		flags |= FUSE_IOCTL_UNRESTRICTED;
 
-	return fuse_do_ioctl(file, cmd, arg, flags);
+	return ndfuse_do_ioctl(file, cmd, arg, flags);
 }
 
 static long cuse_file_compat_ioctl(struct file *file, unsigned int cmd,
@@ -172,7 +172,7 @@ static long cuse_file_compat_ioctl(struct file *file, unsigned int cmd,
 	if (cc->unrestricted_ioctl)
 		flags |= FUSE_IOCTL_UNRESTRICTED;
 
-	return fuse_do_ioctl(file, cmd, arg, flags);
+	return ndfuse_do_ioctl(file, cmd, arg, flags);
 }
 
 static const struct file_operations cuse_frontend_fops = {
@@ -183,7 +183,7 @@ static const struct file_operations cuse_frontend_fops = {
 	.release		= cuse_release,
 	.unlocked_ioctl		= cuse_file_ioctl,
 	.compat_ioctl		= cuse_file_compat_ioctl,
-	.poll			= fuse_file_poll,
+	.poll			= ndfuse_file_poll,
 	.llseek		= noop_llseek,
 };
 
@@ -406,7 +406,7 @@ err_unlock:
 err_region:
 	unregister_chrdev_region(devt, 1);
 err:
-	fuse_abort_conn(fc);
+	ndfuse_abort_conn(fc);
 	goto out;
 }
 
@@ -421,7 +421,7 @@ static int cuse_send_init(struct cuse_conn *cc)
 
 	BUILD_BUG_ON(CUSE_INIT_INFO_MAX > PAGE_SIZE);
 
-	req = fuse_get_req_for_background(fc, 1);
+	req = ndfuse_get_req_for_background(fc, 1);
 	if (IS_ERR(req)) {
 		rc = PTR_ERR(req);
 		goto err;
@@ -454,14 +454,14 @@ static int cuse_send_init(struct cuse_conn *cc)
 	req->page_descs[0].length = req->out.args[1].size;
 	req->num_pages = 1;
 	req->end = cuse_process_init_reply;
-	fuse_request_send_background(fc, req);
+	ndfuse_request_send_background(fc, req);
 
 	return 0;
 
 err_free_page:
 	__free_page(page);
 err_put_req:
-	fuse_put_request(fc, req);
+	ndfuse_put_request(fc, req);
 err:
 	return rc;
 }
@@ -498,9 +498,9 @@ static int cuse_channel_open(struct inode *inode, struct file *file)
 	if (!cc)
 		return -ENOMEM;
 
-	fuse_conn_init(&cc->fc);
+	ndfuse_conn_init(&cc->fc);
 
-	fud = fuse_dev_alloc(&cc->fc);
+	fud = ndfuse_dev_alloc(&cc->fc);
 	if (!fud) {
 		kfree(cc);
 		return -ENOMEM;
@@ -512,7 +512,7 @@ static int cuse_channel_open(struct inode *inode, struct file *file)
 	cc->fc.initialized = 1;
 	rc = cuse_send_init(cc);
 	if (rc) {
-		fuse_dev_free(fud);
+		ndfuse_dev_free(fud);
 		return rc;
 	}
 	file->private_data = fud;
@@ -550,9 +550,9 @@ static int cuse_channel_release(struct inode *inode, struct file *file)
 		cdev_del(cc->cdev);
 	}
 	/* Base reference is now owned by "fud" */
-	fuse_conn_put(&cc->fc);
+	ndfuse_conn_put(&cc->fc);
 
-	rc = fuse_dev_release(inode, file);	/* puts the base reference */
+	rc = ndfuse_dev_release(inode, file);	/* puts the base reference */
 
 	return rc;
 }
@@ -581,7 +581,7 @@ static ssize_t cuse_class_abort_store(struct device *dev,
 {
 	struct cuse_conn *cc = dev_get_drvdata(dev);
 
-	fuse_abort_conn(&cc->fc);
+	ndfuse_abort_conn(&cc->fc);
 	return count;
 }
 static DEVICE_ATTR(abort, 0200, NULL, cuse_class_abort_store);
@@ -610,8 +610,8 @@ static int __init cuse_init(void)
 	for (i = 0; i < CUSE_CONNTBL_LEN; i++)
 		INIT_LIST_HEAD(&cuse_conntbl[i]);
 
-	/* inherit and extend fuse_dev_operations */
-	cuse_channel_fops		= fuse_dev_operations;
+	/* inherit and extend ndfuse_dev_operations */
+	cuse_channel_fops		= ndfuse_dev_operations;
 	cuse_channel_fops.owner		= THIS_MODULE;
 	cuse_channel_fops.open		= cuse_channel_open;
 	cuse_channel_fops.release	= cuse_channel_release;

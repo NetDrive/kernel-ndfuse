@@ -51,7 +51,7 @@ struct fuse_file *fuse_file_alloc(struct fuse_conn *fc)
 		return NULL;
 
 	ff->fc = fc;
-	ff->reserved_req = fuse_request_alloc(0);
+	ff->reserved_req = ndfuse_request_alloc(0);
 	if (unlikely(!ff->reserved_req)) {
 		kfree(ff);
 		return NULL;
@@ -98,23 +98,23 @@ static void fuse_file_put(struct fuse_file *ff, bool sync)
 			 */
 			__clear_bit(FR_BACKGROUND, &req->flags);
 			iput(req->misc.release.inode);
-			fuse_put_request(ff->fc, req);
+			ndfuse_put_request(ff->fc, req);
 		} else if (sync) {
 			__set_bit(FR_FORCE, &req->flags);
 			__clear_bit(FR_BACKGROUND, &req->flags);
-			fuse_request_send(ff->fc, req);
+			ndfuse_request_send(ff->fc, req);
 			iput(req->misc.release.inode);
-			fuse_put_request(ff->fc, req);
+			ndfuse_put_request(ff->fc, req);
 		} else {
 			req->end = fuse_release_end;
 			__set_bit(FR_BACKGROUND, &req->flags);
-			fuse_request_send_background(ff->fc, req);
+			ndfuse_request_send_background(ff->fc, req);
 		}
 		kfree(ff);
 	}
 }
 
-int fuse_do_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
+int ndfuse_do_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
 		 bool isdir)
 {
 	struct fuse_file *ff;
@@ -151,7 +151,7 @@ int fuse_do_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(fuse_do_open);
+EXPORT_SYMBOL_GPL(ndfuse_do_open);
 
 static void fuse_link_write_file(struct file *file)
 {
@@ -210,7 +210,7 @@ int fuse_open_common(struct inode *inode, struct file *file, bool isdir)
 	if (lock_inode)
 		inode_lock(inode);
 
-	err = fuse_do_open(fc, get_node_id(inode), file, isdir);
+	err = ndfuse_do_open(fc, get_node_id(inode), file, isdir);
 
 	if (!err)
 		fuse_finish_open(inode, file);
@@ -291,7 +291,7 @@ static int fuse_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-void fuse_sync_release(struct fuse_file *ff, int flags)
+void ndfuse_sync_release(struct fuse_file *ff, int flags)
 {
 	WARN_ON(refcount_read(&ff->count) > 1);
 	fuse_prepare_release(ff, flags, FUSE_RELEASE);
@@ -301,7 +301,7 @@ void fuse_sync_release(struct fuse_file *ff, int flags)
 	 */
 	fuse_file_put(ff, true);
 }
-EXPORT_SYMBOL_GPL(fuse_sync_release);
+EXPORT_SYMBOL_GPL(ndfuse_sync_release);
 
 /*
  * Scramble the ID space with XTEA, so that the value of the files_struct
@@ -427,9 +427,9 @@ static int fuse_flush(struct file *file, fl_owner_t id)
 	req->in.args[0].size = sizeof(inarg);
 	req->in.args[0].value = &inarg;
 	__set_bit(FR_FORCE, &req->flags);
-	fuse_request_send(fc, req);
+	ndfuse_request_send(fc, req);
 	err = req->out.h.error;
-	fuse_put_request(fc, req);
+	ndfuse_put_request(fc, req);
 	if (err == -ENOSYS) {
 		fc->no_flush = 1;
 		err = 0;
@@ -637,7 +637,7 @@ static size_t fuse_async_req_send(struct fuse_conn *fc, struct fuse_req *req,
 	req->end = fuse_aio_complete_req;
 
 	__fuse_get_request(req);
-	fuse_request_send_background(fc, req);
+	ndfuse_request_send_background(fc, req);
 
 	return num_bytes;
 }
@@ -660,7 +660,7 @@ static size_t fuse_send_read(struct fuse_req *req, struct fuse_io_priv *io,
 	if (io->async)
 		return fuse_async_req_send(fc, req, count, io);
 
-	fuse_request_send(fc, req);
+	ndfuse_request_send(fc, req);
 	return req->out.args[0].size;
 }
 
@@ -725,7 +725,7 @@ static int fuse_do_readpage(struct file *file, struct page *page)
 	 */
 	fuse_wait_on_page_writeback(inode, page->index);
 
-	req = fuse_get_req(fc, 1);
+	req = ndfuse_get_req(fc, 1);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
@@ -751,7 +751,7 @@ static int fuse_do_readpage(struct file *file, struct page *page)
 		SetPageUptodate(page);
 	}
 
-	fuse_put_request(fc, req);
+	ndfuse_put_request(fc, req);
 
 	return err;
 }
@@ -822,11 +822,11 @@ static void fuse_send_readpages(struct fuse_req *req, struct file *file)
 	if (fc->async_read) {
 		req->ff = fuse_file_get(ff);
 		req->end = fuse_readpages_end;
-		fuse_request_send_background(fc, req);
+		ndfuse_request_send_background(fc, req);
 	} else {
-		fuse_request_send(fc, req);
+		ndfuse_request_send(fc, req);
 		fuse_readpages_end(fc, req);
-		fuse_put_request(fc, req);
+		ndfuse_put_request(fc, req);
 	}
 }
 
@@ -854,9 +854,9 @@ static int fuse_readpages_fill(void *_data, struct page *page)
 				     FUSE_MAX_PAGES_PER_REQ);
 		fuse_send_readpages(req, data->file);
 		if (fc->async_read)
-			req = fuse_get_req_for_background(fc, nr_alloc);
+			req = ndfuse_get_req_for_background(fc, nr_alloc);
 		else
-			req = fuse_get_req(fc, nr_alloc);
+			req = ndfuse_get_req(fc, nr_alloc);
 
 		data->req = req;
 		if (IS_ERR(req)) {
@@ -866,7 +866,7 @@ static int fuse_readpages_fill(void *_data, struct page *page)
 	}
 
 	if (WARN_ON(req->num_pages >= req->max_pages)) {
-		fuse_put_request(fc, req);
+		ndfuse_put_request(fc, req);
 		return -EIO;
 	}
 
@@ -894,9 +894,9 @@ static int fuse_readpages(struct file *file, struct address_space *mapping,
 	data.file = file;
 	data.inode = inode;
 	if (fc->async_read)
-		data.req = fuse_get_req_for_background(fc, nr_alloc);
+		data.req = ndfuse_get_req_for_background(fc, nr_alloc);
 	else
-		data.req = fuse_get_req(fc, nr_alloc);
+		data.req = ndfuse_get_req(fc, nr_alloc);
 	data.nr_pages = nr_pages;
 	err = PTR_ERR(data.req);
 	if (IS_ERR(data.req))
@@ -907,7 +907,7 @@ static int fuse_readpages(struct file *file, struct address_space *mapping,
 		if (data.req->num_pages)
 			fuse_send_readpages(data.req, file);
 		else
-			fuse_put_request(fc, data.req);
+			ndfuse_put_request(fc, data.req);
 	}
 out:
 	return err;
@@ -980,7 +980,7 @@ static size_t fuse_send_write(struct fuse_req *req, struct fuse_io_priv *io,
 	if (io->async)
 		return fuse_async_req_send(fc, req, count, io);
 
-	fuse_request_send(fc, req);
+	ndfuse_request_send(fc, req);
 	return req->misc.write.out.size;
 }
 
@@ -1129,7 +1129,7 @@ static ssize_t fuse_perform_write(struct kiocb *iocb,
 		ssize_t count;
 		unsigned nr_pages = fuse_wr_pages(pos, iov_iter_count(ii));
 
-		req = fuse_get_req(fc, nr_pages);
+		req = ndfuse_get_req(fc, nr_pages);
 		if (IS_ERR(req)) {
 			err = PTR_ERR(req);
 			break;
@@ -1153,7 +1153,7 @@ static ssize_t fuse_perform_write(struct kiocb *iocb,
 					err = -EIO;
 			}
 		}
-		fuse_put_request(fc, req);
+		ndfuse_put_request(fc, req);
 	} while (!err && iov_iter_count(ii));
 
 	if (res > 0)
@@ -1322,7 +1322,7 @@ static inline int fuse_iter_npages(const struct iov_iter *ii_p)
 	return iov_iter_npages(ii_p, FUSE_MAX_PAGES_PER_REQ);
 }
 
-ssize_t fuse_direct_io(struct fuse_io_priv *io, struct iov_iter *iter,
+ssize_t ndfuse_direct_io(struct fuse_io_priv *io, struct iov_iter *iter,
 		       loff_t *ppos, int flags)
 {
 	int write = flags & FUSE_DIO_WRITE;
@@ -1341,9 +1341,9 @@ ssize_t fuse_direct_io(struct fuse_io_priv *io, struct iov_iter *iter,
 	int err = 0;
 
 	if (io->async)
-		req = fuse_get_req_for_background(fc, fuse_iter_npages(iter));
+		req = ndfuse_get_req_for_background(fc, fuse_iter_npages(iter));
 	else
-		req = fuse_get_req(fc, fuse_iter_npages(iter));
+		req = ndfuse_get_req(fc, fuse_iter_npages(iter));
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
@@ -1385,24 +1385,24 @@ ssize_t fuse_direct_io(struct fuse_io_priv *io, struct iov_iter *iter,
 		if (nres != nbytes)
 			break;
 		if (count) {
-			fuse_put_request(fc, req);
+			ndfuse_put_request(fc, req);
 			if (io->async)
-				req = fuse_get_req_for_background(fc,
+				req = ndfuse_get_req_for_background(fc,
 					fuse_iter_npages(iter));
 			else
-				req = fuse_get_req(fc, fuse_iter_npages(iter));
+				req = ndfuse_get_req(fc, fuse_iter_npages(iter));
 			if (IS_ERR(req))
 				break;
 		}
 	}
 	if (!IS_ERR(req))
-		fuse_put_request(fc, req);
+		ndfuse_put_request(fc, req);
 	if (res > 0)
 		*ppos = pos;
 
 	return res > 0 ? res : err;
 }
-EXPORT_SYMBOL_GPL(fuse_direct_io);
+EXPORT_SYMBOL_GPL(ndfuse_direct_io);
 
 static ssize_t __fuse_direct_read(struct fuse_io_priv *io,
 				  struct iov_iter *iter,
@@ -1414,7 +1414,7 @@ static ssize_t __fuse_direct_read(struct fuse_io_priv *io,
 	if (is_bad_inode(inode))
 		return -EIO;
 
-	res = fuse_direct_io(io, iter, ppos, 0);
+	res = ndfuse_direct_io(io, iter, ppos, 0);
 
 	fuse_invalidate_attr(inode);
 
@@ -1440,7 +1440,7 @@ static ssize_t fuse_direct_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	inode_lock(inode);
 	res = generic_write_checks(iocb, from);
 	if (res > 0)
-		res = fuse_direct_io(&io, from, &iocb->ki_pos, FUSE_DIO_WRITE);
+		res = ndfuse_direct_io(&io, from, &iocb->ki_pos, FUSE_DIO_WRITE);
 	fuse_invalidate_attr(inode);
 	if (res > 0)
 		fuse_write_update_size(inode, iocb->ki_pos);
@@ -1507,7 +1507,7 @@ __acquires(fc->lock)
 	fuse_writepage_finish(fc, req);
 	spin_unlock(&fc->lock);
 	fuse_writepage_free(fc, req);
-	fuse_put_request(fc, req);
+	ndfuse_put_request(fc, req);
 	spin_lock(&fc->lock);
 }
 
@@ -2480,7 +2480,7 @@ static int fuse_copy_ioctl_iovec(struct fuse_conn *fc, struct iovec *dst,
  * limits ioctl data transfers to well-formed ioctls and is the forced
  * behavior for all FUSE servers.
  */
-long fuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
+long ndfuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
 		   unsigned int flags)
 {
 	struct fuse_file *ff = file->private_data;
@@ -2560,7 +2560,7 @@ long fuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
 		num_pages++;
 	}
 
-	req = fuse_get_req(fc, num_pages);
+	req = ndfuse_get_req(fc, num_pages);
 	if (IS_ERR(req)) {
 		err = PTR_ERR(req);
 		req = NULL;
@@ -2597,10 +2597,10 @@ long fuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
 	req->out.argpages = 1;
 	req->out.argvar = 1;
 
-	fuse_request_send(fc, req);
+	ndfuse_request_send(fc, req);
 	err = req->out.h.error;
 	transferred = req->out.args[1].size;
-	fuse_put_request(fc, req);
+	ndfuse_put_request(fc, req);
 	req = NULL;
 	if (err)
 		goto out;
@@ -2663,7 +2663,7 @@ long fuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
 	err = 0;
  out:
 	if (req)
-		fuse_put_request(fc, req);
+		ndfuse_put_request(fc, req);
 	free_page((unsigned long) iov_page);
 	while (num_pages)
 		__free_page(pages[--num_pages]);
@@ -2671,7 +2671,7 @@ long fuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
 
 	return err ? err : outarg.result;
 }
-EXPORT_SYMBOL_GPL(fuse_do_ioctl);
+EXPORT_SYMBOL_GPL(ndfuse_do_ioctl);
 
 long fuse_ioctl_common(struct file *file, unsigned int cmd,
 		       unsigned long arg, unsigned int flags)
@@ -2685,7 +2685,7 @@ long fuse_ioctl_common(struct file *file, unsigned int cmd,
 	if (is_bad_inode(inode))
 		return -EIO;
 
-	return fuse_do_ioctl(file, cmd, arg, flags);
+	return ndfuse_do_ioctl(file, cmd, arg, flags);
 }
 
 static long fuse_file_ioctl(struct file *file, unsigned int cmd,
@@ -2751,7 +2751,7 @@ static void fuse_register_polled_file(struct fuse_conn *fc,
 	spin_unlock(&fc->lock);
 }
 
-unsigned fuse_file_poll(struct file *file, poll_table *wait)
+unsigned ndfuse_file_poll(struct file *file, poll_table *wait)
 {
 	struct fuse_file *ff = file->private_data;
 	struct fuse_conn *fc = ff->fc;
@@ -2793,7 +2793,7 @@ unsigned fuse_file_poll(struct file *file, poll_table *wait)
 	}
 	return POLLERR;
 }
-EXPORT_SYMBOL_GPL(fuse_file_poll);
+EXPORT_SYMBOL_GPL(ndfuse_file_poll);
 
 /*
  * This is called from fuse_handle_notify() on FUSE_NOTIFY_POLL and
@@ -2904,7 +2904,7 @@ fuse_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 	}
 
 	if (iov_iter_rw(iter) == WRITE) {
-		ret = fuse_direct_io(io, iter, &pos, FUSE_DIO_WRITE);
+		ret = ndfuse_direct_io(io, iter, &pos, FUSE_DIO_WRITE);
 		fuse_invalidate_attr(inode);
 	} else {
 		ret = __fuse_direct_read(io, iter, &pos);
@@ -3023,7 +3023,7 @@ static const struct file_operations fuse_file_operations = {
 	.splice_read	= generic_file_splice_read,
 	.unlocked_ioctl	= fuse_file_ioctl,
 	.compat_ioctl	= fuse_file_compat_ioctl,
-	.poll		= fuse_file_poll,
+	.poll		= ndfuse_file_poll,
 	.fallocate	= fuse_file_fallocate,
 };
 
@@ -3040,7 +3040,7 @@ static const struct file_operations fuse_direct_io_file_operations = {
 	.flock		= fuse_file_flock,
 	.unlocked_ioctl	= fuse_file_ioctl,
 	.compat_ioctl	= fuse_file_compat_ioctl,
-	.poll		= fuse_file_poll,
+	.poll		= ndfuse_file_poll,
 	.fallocate	= fuse_file_fallocate,
 	/* no splice_read */
 };

@@ -371,7 +371,7 @@ void fuse_unlock_inode(struct inode *inode)
 
 static void fuse_umount_begin(struct super_block *sb)
 {
-	fuse_abort_conn(get_fuse_conn_super(sb));
+	ndfuse_abort_conn(get_fuse_conn_super(sb));
 }
 
 static void fuse_send_destroy(struct fuse_conn *fc)
@@ -382,8 +382,8 @@ static void fuse_send_destroy(struct fuse_conn *fc)
 		req->in.h.opcode = FUSE_DESTROY;
 		__set_bit(FR_FORCE, &req->flags);
 		__clear_bit(FR_BACKGROUND, &req->flags);
-		fuse_request_send(fc, req);
-		fuse_put_request(fc, req);
+		ndfuse_request_send(fc, req);
+		ndfuse_put_request(fc, req);
 	}
 }
 
@@ -393,13 +393,13 @@ static void fuse_put_super(struct super_block *sb)
 
 	fuse_send_destroy(fc);
 
-	fuse_abort_conn(fc);
+	ndfuse_abort_conn(fc);
 	mutex_lock(&fuse_mutex);
 	list_del(&fc->entry);
 	fuse_ctl_remove_conn(fc);
 	mutex_unlock(&fuse_mutex);
 
-	fuse_conn_put(fc);
+	ndfuse_conn_put(fc);
 }
 
 static void convert_fuse_statfs(struct kstatfs *stbuf, struct fuse_kstatfs *attr)
@@ -597,7 +597,7 @@ static void fuse_pqueue_init(struct fuse_pqueue *fpq)
 	fpq->connected = 1;
 }
 
-void fuse_conn_init(struct fuse_conn *fc)
+void ndfuse_conn_init(struct fuse_conn *fc)
 {
 	memset(fc, 0, sizeof(*fc));
 	spin_lock_init(&fc->lock);
@@ -622,9 +622,9 @@ void fuse_conn_init(struct fuse_conn *fc)
 	get_random_bytes(&fc->scramble_key, sizeof(fc->scramble_key));
 	fc->pid_ns = get_pid_ns(task_active_pid_ns(current));
 }
-EXPORT_SYMBOL_GPL(fuse_conn_init);
+EXPORT_SYMBOL_GPL(ndfuse_conn_init);
 
-void fuse_conn_put(struct fuse_conn *fc)
+void ndfuse_conn_put(struct fuse_conn *fc)
 {
 	if (refcount_dec_and_test(&fc->count)) {
 		if (fc->destroy_req)
@@ -633,14 +633,14 @@ void fuse_conn_put(struct fuse_conn *fc)
 		fc->release(fc);
 	}
 }
-EXPORT_SYMBOL_GPL(fuse_conn_put);
+EXPORT_SYMBOL_GPL(ndfuse_conn_put);
 
-struct fuse_conn *fuse_conn_get(struct fuse_conn *fc)
+struct fuse_conn *ndfuse_conn_get(struct fuse_conn *fc)
 {
 	refcount_inc(&fc->count);
 	return fc;
 }
-EXPORT_SYMBOL_GPL(fuse_conn_get);
+EXPORT_SYMBOL_GPL(ndfuse_conn_get);
 
 static struct inode *fuse_get_root_inode(struct super_block *sb, unsigned mode)
 {
@@ -961,7 +961,7 @@ static void fuse_send_init(struct fuse_conn *fc, struct fuse_req *req)
 	req->out.args[0].size = sizeof(struct fuse_init_out);
 	req->out.args[0].value = &req->misc.init_out;
 	req->end = process_init_reply;
-	fuse_request_send_background(fc, req);
+	ndfuse_request_send_background(fc, req);
 }
 
 static void fuse_free_conn(struct fuse_conn *fc)
@@ -1010,13 +1010,13 @@ static int fuse_bdi_init(struct fuse_conn *fc, struct super_block *sb)
 	return 0;
 }
 
-struct fuse_dev *fuse_dev_alloc(struct fuse_conn *fc)
+struct fuse_dev *ndfuse_dev_alloc(struct fuse_conn *fc)
 {
 	struct fuse_dev *fud;
 
 	fud = kzalloc(sizeof(struct fuse_dev), GFP_KERNEL);
 	if (fud) {
-		fud->fc = fuse_conn_get(fc);
+		fud->fc = ndfuse_conn_get(fc);
 		fuse_pqueue_init(&fud->pq);
 
 		spin_lock(&fc->lock);
@@ -1026,9 +1026,9 @@ struct fuse_dev *fuse_dev_alloc(struct fuse_conn *fc)
 
 	return fud;
 }
-EXPORT_SYMBOL_GPL(fuse_dev_alloc);
+EXPORT_SYMBOL_GPL(ndfuse_dev_alloc);
 
-void fuse_dev_free(struct fuse_dev *fud)
+void ndfuse_dev_free(struct fuse_dev *fud)
 {
 	struct fuse_conn *fc = fud->fc;
 
@@ -1037,11 +1037,11 @@ void fuse_dev_free(struct fuse_dev *fud)
 		list_del(&fud->entry);
 		spin_unlock(&fc->lock);
 
-		fuse_conn_put(fc);
+		ndfuse_conn_put(fc);
 	}
 	kfree(fud);
 }
-EXPORT_SYMBOL_GPL(fuse_dev_free);
+EXPORT_SYMBOL_GPL(ndfuse_dev_free);
 
 static int fuse_fill_super(struct super_block *sb, void *data, int silent)
 {
@@ -1086,7 +1086,7 @@ static int fuse_fill_super(struct super_block *sb, void *data, int silent)
 	if (!file)
 		goto err;
 
-	if ((file->f_op != &fuse_dev_operations) ||
+	if ((file->f_op != &ndfuse_dev_operations) ||
 	    (file->f_cred->user_ns != &init_user_ns))
 		goto err_fput;
 
@@ -1095,10 +1095,10 @@ static int fuse_fill_super(struct super_block *sb, void *data, int silent)
 	if (!fc)
 		goto err_fput;
 
-	fuse_conn_init(fc);
+	ndfuse_conn_init(fc);
 	fc->release = fuse_free_conn;
 
-	fud = fuse_dev_alloc(fc);
+	fud = ndfuse_dev_alloc(fc);
 	if (!fud)
 		goto err_put_conn;
 
@@ -1131,13 +1131,13 @@ static int fuse_fill_super(struct super_block *sb, void *data, int silent)
 	/* Root dentry doesn't have .d_revalidate */
 	sb->s_d_op = &fuse_dentry_operations;
 
-	init_req = fuse_request_alloc(0);
+	init_req = ndfuse_request_alloc(0);
 	if (!init_req)
 		goto err_put_root;
 	__set_bit(FR_BACKGROUND, &init_req->flags);
 
 	if (is_bdev) {
-		fc->destroy_req = fuse_request_alloc(0);
+		fc->destroy_req = ndfuse_request_alloc(0);
 		if (!fc->destroy_req)
 			goto err_free_init_req;
 	}
@@ -1173,9 +1173,9 @@ static int fuse_fill_super(struct super_block *sb, void *data, int silent)
  err_put_root:
 	dput(root_dentry);
  err_dev_free:
-	fuse_dev_free(fud);
+	ndfuse_dev_free(fud);
  err_put_conn:
-	fuse_conn_put(fc);
+	ndfuse_conn_put(fc);
  err_fput:
 	fput(file);
  err:

@@ -460,7 +460,7 @@ static int fuse_create_open(struct inode *dir, struct dentry *entry,
 			  &outentry.attr, entry_attr_timeout(&outentry), 0);
 	if (!inode) {
 		flags &= ~(O_CREAT | O_EXCL | O_TRUNC);
-		fuse_sync_release(ff, flags);
+		ndfuse_sync_release(ff, flags);
 		fuse_queue_forget(fc, forget, outentry.nodeid, 1);
 		err = -ENOMEM;
 		goto out_err;
@@ -471,7 +471,7 @@ static int fuse_create_open(struct inode *dir, struct dentry *entry,
 	fuse_invalidate_attr(dir);
 	err = finish_open(file, entry, generic_file_open, opened);
 	if (err) {
-		fuse_sync_release(ff, flags);
+		ndfuse_sync_release(ff, flags);
 	} else {
 		file->private_data = ff;
 		fuse_finish_open(inode, file);
@@ -1336,13 +1336,13 @@ static int fuse_readdir(struct file *file, struct dir_context *ctx)
 	if (is_bad_inode(inode))
 		return -EIO;
 
-	req = fuse_get_req(fc, 1);
+	req = ndfuse_get_req(fc, 1);
 	if (IS_ERR(req))
 		return PTR_ERR(req);
 
 	page = alloc_page(GFP_KERNEL);
 	if (!page) {
-		fuse_put_request(fc, req);
+		ndfuse_put_request(fc, req);
 		return -ENOMEM;
 	}
 
@@ -1360,11 +1360,11 @@ static int fuse_readdir(struct file *file, struct dir_context *ctx)
 			       FUSE_READDIR);
 	}
 	fuse_lock_inode(inode);
-	fuse_request_send(fc, req);
+	ndfuse_request_send(fc, req);
 	fuse_unlock_inode(inode);
 	nbytes = req->out.args[0].size;
 	err = req->out.h.error;
-	fuse_put_request(fc, req);
+	ndfuse_put_request(fc, req);
 	if (!err) {
 		if (plus) {
 			err = parse_dirplusfile(page_address(page), nbytes,

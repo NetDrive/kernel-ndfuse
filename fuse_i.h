@@ -688,7 +688,7 @@ static inline u64 get_node_id(struct inode *inode)
 }
 
 /** Device operations */
-extern const struct file_operations fuse_dev_operations;
+extern const struct file_operations ndfuse_dev_operations;
 
 extern const struct dentry_operations fuse_dentry_operations;
 extern const struct dentry_operations fuse_root_dentry_operations;
@@ -734,7 +734,7 @@ struct fuse_file *fuse_file_alloc(struct fuse_conn *fc);
 void fuse_file_free(struct fuse_file *ff);
 void fuse_finish_open(struct inode *inode, struct file *file);
 
-void fuse_sync_release(struct fuse_file *ff, int flags);
+void ndfuse_sync_release(struct fuse_file *ff, int flags);
 
 /**
  * Send RELEASE or RELEASEDIR request
@@ -798,7 +798,7 @@ void __exit fuse_ctl_cleanup(void);
 /**
  * Allocate a request
  */
-struct fuse_req *fuse_request_alloc(unsigned npages);
+struct fuse_req *ndfuse_request_alloc(unsigned npages);
 
 struct fuse_req *fuse_request_alloc_nofs(unsigned npages);
 
@@ -811,8 +811,8 @@ void fuse_request_free(struct fuse_req *req);
  * Get a request, may fail with -ENOMEM,
  * caller should specify # elements in req->pages[] explicitly
  */
-struct fuse_req *fuse_get_req(struct fuse_conn *fc, unsigned npages);
-struct fuse_req *fuse_get_req_for_background(struct fuse_conn *fc,
+struct fuse_req *ndfuse_get_req(struct fuse_conn *fc, unsigned npages);
+struct fuse_req *ndfuse_get_req_for_background(struct fuse_conn *fc,
 					     unsigned npages);
 
 /*
@@ -830,12 +830,12 @@ struct fuse_req *fuse_get_req_nofail_nopages(struct fuse_conn *fc,
  * Decrement reference count of a request.  If count goes to zero free
  * the request.
  */
-void fuse_put_request(struct fuse_conn *fc, struct fuse_req *req);
+void ndfuse_put_request(struct fuse_conn *fc, struct fuse_req *req);
 
 /**
  * Send a request (synchronous)
  */
-void fuse_request_send(struct fuse_conn *fc, struct fuse_req *req);
+void ndfuse_request_send(struct fuse_conn *fc, struct fuse_req *req);
 
 /**
  * Simple request sending that does request allocation and freeing
@@ -845,13 +845,13 @@ ssize_t fuse_simple_request(struct fuse_conn *fc, struct fuse_args *args);
 /**
  * Send a request in the background
  */
-void fuse_request_send_background(struct fuse_conn *fc, struct fuse_req *req);
+void ndfuse_request_send_background(struct fuse_conn *fc, struct fuse_req *req);
 
 void fuse_request_send_background_locked(struct fuse_conn *fc,
 					 struct fuse_req *req);
 
 /* Abort all requests */
-void fuse_abort_conn(struct fuse_conn *fc);
+void ndfuse_abort_conn(struct fuse_conn *fc);
 
 /**
  * Invalidate inode attributes
@@ -865,20 +865,20 @@ void fuse_invalidate_atime(struct inode *inode);
 /**
  * Acquire reference to fuse_conn
  */
-struct fuse_conn *fuse_conn_get(struct fuse_conn *fc);
+struct fuse_conn *ndfuse_conn_get(struct fuse_conn *fc);
 
 /**
  * Initialize fuse_conn
  */
-void fuse_conn_init(struct fuse_conn *fc);
+void ndfuse_conn_init(struct fuse_conn *fc);
 
 /**
  * Release reference to fuse_conn
  */
-void fuse_conn_put(struct fuse_conn *fc);
+void ndfuse_conn_put(struct fuse_conn *fc);
 
-struct fuse_dev *fuse_dev_alloc(struct fuse_conn *fc);
-void fuse_dev_free(struct fuse_dev *fud);
+struct fuse_dev *ndfuse_dev_alloc(struct fuse_conn *fc);
+void ndfuse_dev_free(struct fuse_dev *fud);
 
 /**
  * Add connection to control filesystem
@@ -932,27 +932,27 @@ int fuse_reverse_inval_inode(struct super_block *sb, u64 nodeid,
 int fuse_reverse_inval_entry(struct super_block *sb, u64 parent_nodeid,
 			     u64 child_nodeid, struct qstr *name);
 
-int fuse_do_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
+int ndfuse_do_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
 		 bool isdir);
 
 /**
- * fuse_direct_io() flags
+ * ndfuse_direct_io() flags
  */
 
 /** If set, it is WRITE; otherwise - READ */
 #define FUSE_DIO_WRITE (1 << 0)
 
-/** CUSE pass fuse_direct_io() a file which f_mapping->host is not from FUSE */
+/** CUSE pass ndfuse_direct_io() a file which f_mapping->host is not from FUSE */
 #define FUSE_DIO_CUSE  (1 << 1)
 
-ssize_t fuse_direct_io(struct fuse_io_priv *io, struct iov_iter *iter,
+ssize_t ndfuse_direct_io(struct fuse_io_priv *io, struct iov_iter *iter,
 		       loff_t *ppos, int flags);
-long fuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
+long ndfuse_do_ioctl(struct file *file, unsigned int cmd, unsigned long arg,
 		   unsigned int flags);
 long fuse_ioctl_common(struct file *file, unsigned int cmd,
 		       unsigned long arg, unsigned int flags);
-unsigned fuse_file_poll(struct file *file, poll_table *wait);
-int fuse_dev_release(struct inode *inode, struct file *file);
+unsigned ndfuse_file_poll(struct file *file, poll_table *wait);
+int ndfuse_dev_release(struct inode *inode, struct file *file);
 
 bool fuse_write_update_size(struct inode *inode, loff_t pos);
 
