@@ -22,7 +22,9 @@
 #include <linux/splice.h>
 #include <linux/sched.h>
 
-MODULE_ALIAS_MISCDEV(FUSE_MINOR);
+#define NDFUSE_MINOR	251
+
+MODULE_ALIAS_MISCDEV(NDFUSE_MINOR);
 MODULE_ALIAS("devname:ndfuse");
 
 static struct kmem_cache *fuse_req_cachep;
@@ -2240,7 +2242,7 @@ const struct file_operations ndfuse_dev_operations = {
 EXPORT_SYMBOL_GPL(ndfuse_dev_operations);
 
 static struct miscdevice fuse_miscdevice = {
-	.minor = FUSE_MINOR,
+	.minor = NDFUSE_MINOR,
 	.name  = "ndfuse",
 	.fops = &ndfuse_dev_operations,
 };
