@@ -337,11 +337,11 @@ static void fuse_ctl_kill_sb(struct super_block *sb)
 
 static struct file_system_type fuse_ctl_fs_type = {
 	.owner		= THIS_MODULE,
-	.name		= "fusectl",
+	.name		= "ndfusectl",
 	.mount		= fuse_ctl_mount,
 	.kill_sb	= fuse_ctl_kill_sb,
 };
-MODULE_ALIAS_FS("fusectl");
+MODULE_ALIAS_FS("ndfusectl");
 
 int __init fuse_ctl_init(void)
 {
