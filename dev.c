@@ -1340,7 +1340,10 @@ static ssize_t fuse_dev_read(struct kiocb *iocb, struct iov_iter *to)
 	struct fuse_dev *fud = fuse_get_dev(file);
 
 	if (!fud)
+	{
+		printk(KERN_WARNING "fuse_dev_read: fuse_dev is NULL\n");
 		return -EPERM;
+	}
 
 	if (!iter_is_iovec(to))
 		return -EINVAL;
@@ -1361,7 +1364,10 @@ static ssize_t fuse_dev_splice_read(struct file *in, loff_t *ppos,
 	struct fuse_dev *fud = fuse_get_dev(in);
 
 	if (!fud)
+	{
+		printk(KERN_WARNING "fuse_dev_splice_read: fuse_dev is NULL\n");
 		return -EPERM;
+	}
 
 	bufs = kmalloc(pipe->buffers * sizeof(struct pipe_buffer), GFP_KERNEL);
 	if (!bufs)
@@ -1918,7 +1924,10 @@ static ssize_t fuse_dev_write(struct kiocb *iocb, struct iov_iter *from)
 	struct fuse_dev *fud = fuse_get_dev(iocb->ki_filp);
 
 	if (!fud)
+	{
+		printk(KERN_WARNING "fuse_dev_write: fuse_dev is NULL\n");
 		return -EPERM;
+	}
 
 	if (!iter_is_iovec(from))
 		return -EINVAL;
@@ -1942,7 +1951,10 @@ static ssize_t fuse_dev_splice_write(struct pipe_inode_info *pipe,
 
 	fud = fuse_get_dev(out);
 	if (!fud)
+	{
+		printk(KERN_WARNING "fuse_dev_splice_write: fuse_dev is NULL\n");
 		return -EPERM;
+	}
 
 	bufs = kmalloc(pipe->buffers * sizeof(struct pipe_buffer), GFP_KERNEL);
 	if (!bufs)
@@ -2166,7 +2178,10 @@ static int fuse_dev_fasync(int fd, struct file *file, int on)
 	struct fuse_dev *fud = fuse_get_dev(file);
 
 	if (!fud)
+	{
+		printk(KERN_WARNING "fuse_dev_fasync: fuse_dev is NULL\n");
 		return -EPERM;
+	}
 
 	/* No locking - fasync_helper does its own locking */
 	return fasync_helper(fd, file, on, &fud->fc->iq.fasync);

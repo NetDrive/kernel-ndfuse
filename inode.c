@@ -1345,7 +1345,7 @@ static int __init fuse_init(void)
 {
 	int res;
 
-	printk(KERN_INFO "fuse init (API version %i.%i)\n",
+	printk(KERN_INFO "fuse_init (API version %i.%i)\n",
 	       FUSE_KERNEL_VERSION, FUSE_KERNEL_MINOR_VERSION);
 
 	INIT_LIST_HEAD(&fuse_conn_list);
