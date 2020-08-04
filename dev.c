@@ -2260,6 +2260,7 @@ static struct miscdevice fuse_miscdevice = {
 	.minor = NDFUSE_MINOR,
 	.name  = "ndfuse",
 	.fops = &ndfuse_dev_operations,
+	.mode = 0666,
 };
 
 int __init fuse_dev_init(void)
