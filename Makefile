@@ -11,3 +11,7 @@ all:
 
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+install:
+	lsmod | grep ndfuse && rmmod ndfuse || true
+	insmod ndfuse.ko
